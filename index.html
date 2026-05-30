@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Камінь · Ножиці · Папір — мережева гра</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;500&family=Syne:wght@600;800&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0f1a;
+    --bg2: #111623;
+    --bg3: #161c2e;
+    --border: #1e2740;
+    --border2: #2a3555;
+    --text: #e8eaf0;
+    --text2: #8892aa;
+    --text3: #5a6480;
+    --accent: #f0a500;
+    --p1: #5b8dee;
+    --p2: #3dd9b3;
+    --tie: #a586d6;
+    --error: #e05252;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin: 8px 0 4px;
+    text-align: center;
+  }
+  .sub {
+    color: var(--text2);
+    font-size: 12px;
+    margin-bottom: 18px;
+    font-family: 'DM Mono', monospace;
+    text-align: center;
+  }
+  .status-bar {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .status-bar .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--text3);
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .status-bar.online .dot { background: #3dd9b3; box-shadow: 0 0 8px rgba(61,217,179,.6); }
+  .status-bar.error .dot { background: var(--error); }
+
+  .scoreboard {
+    display: flex;
+    gap: 14px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    min-width: 280px;
+    max-width: 100%;
+  }
+  .score-cell { text-align: center; flex: 1; min-width: 70px; }
+  .score-cell .label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .score-cell.p1 .label { color: var(--p1); }
+  .score-cell.p2 .label { color: var(--p2); }
+  .score-cell.tie .label { color: var(--tie); }
+  .score-cell .val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 26px;
+  }
+  .score-cell .me {
+    display: inline-block;
+    margin-left: 4px;
+    background: var(--accent);
+    color: var(--bg);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    vertical-align: middle;
+  }
+
+  .stage {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 26px 22px;
+    max-width: 520px;
+    width: 100%;
+    text-align: center;
+  }
+  .turn {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    margin-bottom: 6px;
+  }
+  .who {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    margin-bottom: 18px;
+  }
+  .who.p1 { color: var(--p1); }
+  .who.p2 { color: var(--p2); }
+
+  .modal-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+  }
+  .modal-input:focus { outline: none; border-color: var(--accent); }
+
+  .choices {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .choice {
+    background: var(--bg3);
+    border: 1.5px solid var(--border2);
+    border-radius: 12px;
+    padding: 22px 6px 16px;
+    cursor: pointer;
+    transition: all .15s;
+    user-select: none;
+  }
+  .choice:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+  }
+  .choice.disabled { opacity: .35; pointer-events: none; }
+  .choice .emoji { font-size: 46px; display: block; margin-bottom: 6px; line-height: 1; }
+  .choice .label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+
+  .reveal-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+    margin: 20px 0 24px;
+  }
+  .reveal-cell {
+    background: var(--bg3);
+    border: 1.5px solid var(--border2);
+    border-radius: 12px;
+    padding: 20px 6px 16px;
+  }
+  .reveal-cell.winner { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(240, 165, 0, .15); }
+  .reveal-cell .emoji { font-size: 50px; display: block; margin-bottom: 6px; line-height: 1; }
+  .reveal-cell .player {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    word-break: break-word;
+  }
+  .reveal-cell.p1 .player { color: var(--p1); }
+  .reveal-cell.p2 .player { color: var(--p2); }
+  .vs {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    color: var(--text3);
+    font-size: 14px;
+  }
+  .verdict {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+  .verdict.p1 { color: var(--p1); }
+  .verdict.p2 { color: var(--p2); }
+  .verdict.tie { color: var(--tie); }
+
+  .waiting {
+    color: var(--text2);
+    font-size: 13px;
+    margin: 18px 0;
+  }
+  .waiting .pulse {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: pulse 1.4s infinite;
+    vertical-align: middle;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: .4; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.3); }
+  }
+
+  .btn {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 11px 22px;
+    border-radius: 9px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn:disabled { opacity: .35; cursor: not-allowed; }
+  .btn.ghost {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border2);
+  }
+  .btn.ghost:hover { color: var(--text); border-color: var(--text2); }
+  .btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .share-link {
+    background: var(--bg3);
+    border: 1px dashed var(--border2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 14px;
+    word-break: break-all;
+    cursor: pointer;
+  }
+  .share-link:hover { border-color: var(--accent); color: var(--text); }
+  .share-link .copy-hint {
+    font-size: 9px;
+    color: var(--text3);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+
+  footer {
+    margin-top: 24px;
+    color: var(--text3);
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .error-msg {
+    color: var(--error);
+    font-size: 12px;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Камінь · Ножиці · Папір</h1>
+<div class="sub">мережа · кімната <span id="room-id">default</span></div>
+<div class="status-bar" id="status-bar"><span class="dot"></span><span id="status-text">з'єднання...</span></div>
+
+<div class="scoreboard" id="scoreboard" style="display:none">
+  <div class="score-cell p1">
+    <div class="label" id="label-p1">P1</div>
+    <div class="val" id="score-p1">0</div>
+  </div>
+  <div class="score-cell tie">
+    <div class="label">нічиї</div>
+    <div class="val" id="score-tie">0</div>
+  </div>
+  <div class="score-cell p2">
+    <div class="label" id="label-p2">P2</div>
+    <div class="val" id="score-p2">0</div>
+  </div>
+</div>
+
+<div class="stage" id="stage"></div>
+
+<footer>раунд <span id="round-num">1</span></footer>
+
+<script>
+  const ROOM = new URLSearchParams(location.search).get('room') || 'default';
+  document.getElementById('room-id').textContent = ROOM;
+
+  const PLAYER_ID_KEY = 'rps-player-id';
+  let playerId = localStorage.getItem(PLAYER_ID_KEY);
+  if (!playerId) {
+    playerId = 'p_' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+    localStorage.setItem(PLAYER_ID_KEY, playerId);
+  }
+  let mySlot = null;       // 'p1' | 'p2' | 'observer' | null
+  let myName = localStorage.getItem('rps-name') || '';
+  let lastState = null;
+  let pollTimer = null;
+
+  const EMOJI = { rock: '🪨', paper: '📄', scissors: '✂️' };
+  const LABEL = { rock: 'Камінь', paper: 'Папір', scissors: 'Ножиці' };
+  const BEATS = { rock: 'scissors', paper: 'rock', scissors: 'paper' };
+
+  const stageEl = document.getElementById('stage');
+  const scoreboardEl = document.getElementById('scoreboard');
+  const statusBar = document.getElementById('status-bar');
+  const statusText = document.getElementById('status-text');
+
+  async function api(method, body = null) {
+    const url = `/api/rps?room=${encodeURIComponent(ROOM)}`;
+    const opts = {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+    };
+    if (body) opts.body = JSON.stringify({ ...body, playerId, room: ROOM });
+    const res = await fetch(url, opts);
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
+  function setStatus(state, text) {
+    statusBar.className = 'status-bar ' + state;
+    statusText.textContent = text;
+  }
+
+  async function join(name) {
+    try {
+      const { state, slot } = await api('POST', { action: 'join', name });
+      mySlot = slot;
+      lastState = state;
+      myName = name;
+      localStorage.setItem('rps-name', name);
+      render();
+      startPolling();
+    } catch (e) {
+      setStatus('error', 'не вдалось зайти: ' + e.message);
+    }
+  }
+
+  async function choose(c) {
+    try {
+      const { state } = await api('POST', { action: 'choose', choice: c });
+      lastState = state;
+      render();
+    } catch (e) {
+      setStatus('error', e.message);
+    }
+  }
+
+  async function nextRound() {
+    try {
+      const { state } = await api('POST', { action: 'next' });
+      lastState = state;
+      render();
+    } catch (e) {
+      setStatus('error', e.message);
+    }
+  }
+
+  async function resetAll() {
+    if (!confirm('Скинути рахунок до 0:0:0?')) return;
+    try {
+      const { state } = await api('POST', { action: 'reset' });
+      lastState = state;
+      render();
+    } catch (e) {
+      setStatus('error', e.message);
+    }
+  }
+
+  async function leaveRoom() {
+    if (!confirm('Покинути кімнату? Інший гравець зможе зайти.')) return;
+    try {
+      await api('POST', { action: 'leave' });
+      mySlot = null;
+      lastState = null;
+      stopPolling();
+      renderJoin();
+      setStatus('', 'вийшов з кімнати');
+    } catch (e) {
+      setStatus('error', e.message);
+    }
+  }
+
+  async function pollOnce() {
+    try {
+      const { state } = await api('GET');
+      // detect зміни — render тільки якщо щось змінилось
+      const changed = !lastState || JSON.stringify(state) !== JSON.stringify(lastState);
+      lastState = state;
+      // якщо мене кікнуло (slot зник зі state) — re-join
+      if (mySlot && mySlot !== 'observer') {
+        if (state[mySlot]?.id !== playerId) {
+          mySlot = null;
+          renderJoin();
+          return;
+        }
+      }
+      if (changed) render();
+      setStatus('online', `онлайн · кімната «${ROOM}»`);
+    } catch (e) {
+      setStatus('error', 'офлайн · ' + e.message);
+    }
+  }
+
+  function startPolling() {
+    stopPolling();
+    pollOnce();
+    pollTimer = setInterval(pollOnce, 1500);
+  }
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  function render() {
+    if (!lastState) return;
+    updateScoreboard();
+    if (!mySlot) { renderJoin(); return; }
+
+    const { p1, p2, round } = lastState;
+    document.getElementById('round-num').textContent = round;
+
+    // observer
+    if (mySlot === 'observer') { renderObserver(); return; }
+
+    const me = lastState[mySlot];
+    const opp = lastState[mySlot === 'p1' ? 'p2' : 'p1'];
+
+    // обидва ще не у грі
+    if (!opp) { renderWaitingForOpponent(); return; }
+
+    // обидва вибрали — reveal
+    if (me?.choice && opp?.choice) { renderReveal(); return; }
+
+    // я вже вибрав — чекаю опонента
+    if (me?.choice && !opp?.choice) { renderWaitingForChoice(opp); return; }
+
+    // мій хід (опонент може ще не вибрав, ми вибираємо паралельно)
+    renderChoose();
+  }
+
+  function updateScoreboard() {
+    if (!lastState) return;
+    scoreboardEl.style.display = 'flex';
+    const { p1, p2, score } = lastState;
+    const p1Name = p1?.name || 'чекає…';
+    const p2Name = p2?.name || 'чекає…';
+    const p1MeBadge = mySlot === 'p1' ? '<span class="me">ти</span>' : '';
+    const p2MeBadge = mySlot === 'p2' ? '<span class="me">ти</span>' : '';
+    document.getElementById('label-p1').innerHTML = escapeHtml(p1Name) + p1MeBadge;
+    document.getElementById('label-p2').innerHTML = escapeHtml(p2Name) + p2MeBadge;
+    document.getElementById('score-p1').textContent = score.p1;
+    document.getElementById('score-p2').textContent = score.p2;
+    document.getElementById('score-tie').textContent = score.tie;
+  }
+
+  function renderJoin() {
+    scoreboardEl.style.display = 'none';
+    const url = location.origin + '/rps' + (ROOM !== 'default' ? '?room=' + encodeURIComponent(ROOM) : '');
+    stageEl.innerHTML = `
+      <div class="turn">приєднайся</div>
+      <div class="who">Як тебе звуть?</div>
+      <input type="text" class="modal-input" id="join-name" maxlength="16" placeholder="Ім'я" value="${escapeHtml(myName)}">
+      <button class="btn" id="join-btn">Зайти у гру</button>
+      <div class="share-link" id="share-link">${escapeHtml(url)}
+        <div class="copy-hint">↑ тицьни щоб скопіювати · кинь другу</div>
+      </div>
+    `;
+    const nameInput = document.getElementById('join-name');
+    const joinBtn = document.getElementById('join-btn');
+    nameInput.focus();
+    nameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doJoin();
+    });
+    joinBtn.addEventListener('click', doJoin);
+    document.getElementById('share-link').addEventListener('click', () => {
+      navigator.clipboard?.writeText(url).then(() => {
+        const sl = document.getElementById('share-link');
+        const orig = sl.innerHTML;
+        sl.innerHTML = '✓ скопійовано · кидай другу';
+        setTimeout(() => { sl.innerHTML = orig; sl.addEventListener('click', arguments.callee); }, 1500);
+      });
+    });
+    function doJoin() {
+      const n = nameInput.value.trim();
+      if (!n) { nameInput.focus(); return; }
+      joinBtn.disabled = true;
+      joinBtn.textContent = 'заходжу…';
+      join(n);
+    }
+  }
+
+  function renderObserver() {
+    stageEl.innerHTML = `
+      <div class="turn">спостерігач</div>
+      <div class="who">Кімната «${escapeHtml(ROOM)}» заповнена</div>
+      <div class="waiting">Двоє гравців уже грають. Ти бачиш рахунок у режимі read-only.</div>
+      <div class="btn-row">
+        <button class="btn ghost" id="new-room">створити нову кімнату</button>
+      </div>
+    `;
+    document.getElementById('new-room').addEventListener('click', () => {
+      const newRoom = prompt('Назва нової кімнати (короткий код):', randomRoom());
+      if (newRoom) location.href = '/rps?room=' + encodeURIComponent(newRoom);
+    });
+  }
+
+  function renderWaitingForOpponent() {
+    const url = location.origin + '/rps' + (ROOM !== 'default' ? '?room=' + encodeURIComponent(ROOM) : '');
+    stageEl.innerHTML = `
+      <div class="turn">чекаємо другого гравця</div>
+      <div class="who ${mySlot}">${escapeHtml(myName)}</div>
+      <div class="waiting"><span class="pulse"></span>Кинь це посилання другу</div>
+      <div class="share-link" id="share-link">${escapeHtml(url)}
+        <div class="copy-hint">↑ тицьни щоб скопіювати</div>
+      </div>
+      <div class="btn-row" style="margin-top:20px">
+        <button class="btn ghost" id="leave-btn">покинути кімнату</button>
+      </div>
+    `;
+    document.getElementById('share-link').addEventListener('click', () => {
+      navigator.clipboard?.writeText(url).then(() => {
+        const sl = document.getElementById('share-link');
+        sl.innerHTML = '✓ скопійовано';
+      });
+    });
+    document.getElementById('leave-btn').addEventListener('click', leaveRoom);
+  }
+
+  function renderChoose() {
+    const me = lastState[mySlot];
+    stageEl.innerHTML = `
+      <div class="turn">твій хід</div>
+      <div class="who ${mySlot}">${escapeHtml(me.name)}</div>
+      <div class="choices">
+        ${['rock', 'paper', 'scissors'].map(c => `
+          <div class="choice" data-c="${c}">
+            <span class="emoji">${EMOJI[c]}</span>
+            <span class="label">${LABEL[c]}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn ghost" id="leave-btn">покинути</button>
+      </div>
+    `;
+    stageEl.querySelectorAll('.choice').forEach(el => {
+      el.addEventListener('click', () => {
+        el.parentElement.querySelectorAll('.choice').forEach(c => c.classList.add('disabled'));
+        choose(el.dataset.c);
+      });
+    });
+    document.getElementById('leave-btn').addEventListener('click', leaveRoom);
+  }
+
+  function renderWaitingForChoice(opp) {
+    stageEl.innerHTML = `
+      <div class="turn">✓ ти обрав</div>
+      <div class="who ${mySlot}">${escapeHtml(lastState[mySlot].name)}</div>
+      <div class="waiting"><span class="pulse"></span>Чекаємо вибір — ${escapeHtml(opp.name)}</div>
+    `;
+  }
+
+  function renderReveal() {
+    const p1 = lastState.p1;
+    const p2 = lastState.p2;
+    const winner = p1.choice === p2.choice ? 'tie' : (BEATS[p1.choice] === p2.choice ? 'p1' : 'p2');
+    let verdictText;
+    if (winner === 'tie') verdictText = 'Нічия';
+    else verdictText = `${escapeHtml(lastState[winner].name)} перемагає`;
+
+    stageEl.innerHTML = `
+      <div class="turn">Раунд ${lastState.round}</div>
+      <div class="reveal-grid">
+        <div class="reveal-cell p1 ${winner === 'p1' ? 'winner' : ''}">
+          <span class="emoji">${EMOJI[p1.choice]}</span>
+          <span class="player">${escapeHtml(p1.name)}</span>
+        </div>
+        <div class="vs">vs</div>
+        <div class="reveal-cell p2 ${winner === 'p2' ? 'winner' : ''}">
+          <span class="emoji">${EMOJI[p2.choice]}</span>
+          <span class="player">${escapeHtml(p2.name)}</span>
+        </div>
+      </div>
+      <div class="verdict ${winner}">${verdictText}</div>
+      <div class="btn-row">
+        <button class="btn" id="next-btn">Ще раунд</button>
+        <button class="btn ghost" id="reset-btn">скинути рахунок</button>
+        <button class="btn ghost" id="leave-btn">вийти</button>
+      </div>
+    `;
+    document.getElementById('next-btn').addEventListener('click', nextRound);
+    document.getElementById('reset-btn').addEventListener('click', resetAll);
+    document.getElementById('leave-btn').addEventListener('click', leaveRoom);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+  function randomRoom() {
+    return Math.random().toString(36).slice(2, 6);
+  }
+
+  // init: спочатку pollOnce щоб дізнатись стан, потім join якщо треба
+  (async () => {
+    try {
+      const { state } = await api('GET');
+      lastState = state;
+      // якщо вже у грі (refresh) — продовжуємо
+      if (state.p1?.id === playerId) mySlot = 'p1';
+      else if (state.p2?.id === playerId) mySlot = 'p2';
+      if (mySlot) {
+        startPolling();
+        render();
+      } else {
+        setStatus('online', `онлайн · кімната «${ROOM}»`);
+        renderJoin();
+      }
+    } catch (e) {
+      setStatus('error', 'не вдається підключитись: ' + e.message);
+      renderJoin();
+    }
+  })();
+
+  // cleanup при закритті
+  window.addEventListener('beforeunload', () => {
+    stopPolling();
+  });
+</script>
+</body>
+</html>
