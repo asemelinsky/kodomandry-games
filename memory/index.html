@@ -313,6 +313,12 @@
     text-align: center;
     line-height: 1.6;
   }
+  .ghost-btn {
+    background: transparent; color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 3px 10px; font: inherit; font-size: 13px; cursor: pointer;
+    margin-left: 4px;
+  }
+  .ghost-btn:hover { border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -320,6 +326,8 @@
 <div class="topbar">
   <a href="/">← усі ігри</a>
   <span>кімната: <code style="background:var(--bg3);padding:1px 6px;border-radius:3px;color:var(--accent)" id="room-id">default</code></span>
+  <button class="ghost-btn" id="new-room-btn" title="створити нову порожню кімнату з рандомним кодом">🎲 нова</button>
+  <button class="ghost-btn" id="share-room-btn" title="скопіювати посилання на цю кімнату">🔗 поділитися</button>
 </div>
 
 <h1>🧠 Пам'ять</h1>
@@ -364,6 +372,21 @@
 <script>
   const ROOM = (new URLSearchParams(location.search).get('room') || 'default').slice(0, 40);
   document.getElementById('room-id').textContent = ROOM;
+  document.getElementById('new-room-btn').addEventListener('click', () => {
+    const code = Math.random().toString(36).slice(2, 8);
+    location.href = location.pathname + '?room=' + code;
+  });
+  document.getElementById('share-room-btn').addEventListener('click', async () => {
+    const url = location.origin + location.pathname + (ROOM !== 'default' ? '?room=' + encodeURIComponent(ROOM) : '');
+    try {
+      await navigator.clipboard.writeText(url);
+      const btn = document.getElementById('share-room-btn');
+      btn.textContent = '✓ скопійовано';
+      setTimeout(() => { btn.textContent = '🔗 поділитися'; }, 1500);
+    } catch (e) {
+      prompt('Скопіюй посилання:', url);
+    }
+  });
 
   const PLAYER_ID_KEY = 'mem-player-id';
   let playerId = localStorage.getItem(PLAYER_ID_KEY);
