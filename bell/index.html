@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Не дзвони у дзвіночок · Кодомандри</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔔%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;500&family=Syne:wght@600;800&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0f1a; --bg2: #111623; --bg3: #161c2e;
+    --border: #1e2740; --border2: #2a3555;
+    --text: #e8eaf0; --text2: #8892aa; --text3: #5a6480;
+    --bell: #f5c542; --green: #3dd9b3; --red: #e05252;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; padding: 14px 12px 18px; overflow-x: hidden;
+    user-select: none;
+  }
+  a.back { position: absolute; top: 12px; left: 14px; color: var(--text3);
+    font-family: 'DM Mono', monospace; font-size: 12px; text-decoration: none; }
+  a.back:hover { color: var(--bell); }
+  header { text-align: center; margin-bottom: 10px; }
+  h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 19px;
+    color: var(--bell); text-transform: uppercase; letter-spacing: .08em; }
+  .sub { color: var(--text2); font-size: 11px; font-family: 'DM Mono', monospace; margin-top: 2px; }
+
+  .status-bar { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3);
+    margin: 4px 0 8px; min-height: 14px; }
+  .status-bar.online { color: var(--green); }
+  .status-bar.error  { color: var(--red); }
+
+  /* scoreboard */
+  .scoreboard { width: 100%; max-width: 440px; display: none;
+    justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .pcard { flex: 1; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 8px; text-align: center; transition: border-color .2s; }
+  .pcard.active { border-color: var(--bell); }
+  .pcard .pname { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pcard .pname .me { color: var(--bell); font-size: 10px; margin-left: 4px; }
+  .pcard .hearts { font-size: 18px; margin-top: 4px; letter-spacing: 2px; min-height: 22px; }
+  .pcard .heart-lost { opacity: .18; }
+
+  /* stage */
+  .stage { width: 100%; max-width: 440px; background: var(--bg2);
+    border: 1px solid var(--border); border-radius: 16px; padding: 16px;
+    min-height: 280px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; position: relative; overflow: hidden; }
+
+  .arena { position: relative; width: 100%; height: 200px; display: flex;
+    align-items: center; justify-content: center; }
+  .cup { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%);
+    font-size: 72px; line-height: 1; transition: transform .18s ease, filter .18s; z-index: 3; }
+  .cup.lifted { transform: translateX(-50%) translateY(-46px); }
+  .bell { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%);
+    font-size: 52px; line-height: 1; opacity: 0; transition: opacity .15s; z-index: 2; }
+  .bell.show { opacity: 1; }
+  .bell.ringing { animation: ring .12s linear infinite; }
+  @keyframes ring { 0%{transform:translateX(-50%) rotate(-12deg)} 50%{transform:translateX(-50%) rotate(12deg)} 100%{transform:translateX(-50%) rotate(-12deg)} }
+  .hand { position: absolute; bottom: 36px; font-size: 46px; line-height: 1; z-index: 4;
+    transition: none; }
+  .hand.left  { left: 12%; }
+  .hand.right { right: 12%; transform: scaleX(-1); }
+
+  .alert { position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px;
+    color: var(--red); text-transform: uppercase; letter-spacing: .05em;
+    animation: blink .4s steps(2,start) infinite; z-index: 6; white-space: nowrap; }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  .centermsg { font-family: 'Syne', sans-serif; font-weight: 800; text-align: center; }
+  .countdown { font-size: 64px; color: var(--bell); }
+  .bigmsg { font-size: 26px; }
+  .submsg { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text2);
+    margin-top: 8px; text-align: center; }
+
+  /* buttons */
+  .controls { width: 100%; max-width: 440px; display: none;
+    grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .gbtn { position: relative; border: none; border-radius: 14px; padding: 18px 8px;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px;
+    text-transform: uppercase; letter-spacing: .04em; cursor: pointer; color: #0c0f1a;
+    overflow: hidden; transition: transform .08s, opacity .15s; touch-action: manipulation; }
+  .gbtn:active { transform: scale(.96); }
+  .gbtn.raise { background: var(--green); }
+  .gbtn.stop  { background: var(--red); color: #fff; }
+  .gbtn .lbl { position: relative; z-index: 2; display: block; }
+  .gbtn .lbl .emoji { font-size: 26px; display: block; margin-bottom: 2px; }
+  .gbtn .cooldown { position: absolute; left: 0; bottom: 0; width: 100%;
+    background: rgba(12,15,26,.55); z-index: 3; height: 0%; transition: height .1s linear; }
+  .gbtn.cooling { cursor: not-allowed; }
+  .gbtn .cdtext { position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; z-index: 4; font-size: 22px; color: #fff;
+    font-family: 'DM Mono', monospace; pointer-events: none; }
+
+  /* lobby / join */
+  .panel { width: 100%; max-width: 440px; text-align: center; }
+  .panel .turn { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text3);
+    text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px; }
+  .panel .who { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; margin-bottom: 14px; }
+  input[type=text] { width: 100%; max-width: 260px; background: var(--bg3);
+    border: 1px solid var(--border2); border-radius: 10px; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 15px; padding: 11px 12px; text-align: center; }
+  .btn { display: inline-block; margin-top: 14px; background: var(--bell); color: #0c0f1a;
+    border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 14px; text-transform: uppercase; letter-spacing: .04em; padding: 12px 26px;
+    cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+  .btn:active { transform: scale(.97); }
+  .btnrow { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+
+  .roombar { display: flex; gap: 8px; justify-content: center; align-items: center;
+    margin-top: 14px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); }
+  .roombar code { color: var(--text2); }
+  .roombar button { background: none; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text2); font-family: 'DM Mono', monospace; font-size: 11px;
+    padding: 4px 8px; cursor: pointer; }
+  .roombar button:hover { border-color: var(--bell); color: var(--bell); }
+
+  .rules { width: 100%; max-width: 440px; margin-top: 14px; font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--text3); line-height: 1.6; }
+  .rules summary { cursor: pointer; color: var(--text2); }
+  .rules b.g { color: var(--green); } .rules b.r { color: var(--red); }
+</style>
+</head>
+<body>
+<a class="back" href="/">← усі ігри</a>
+
+<header>
+  <h1>🔔 Не дзвони у дзвіночок</h1>
+  <div class="sub">реакція + хитрість · на двох</div>
+</header>
+
+<div class="status-bar" id="status-bar"><span id="status-text">під'єднуюсь…</span></div>
+
+<div class="scoreboard" id="scoreboard">
+  <div class="pcard" id="pcard-p1">
+    <div class="pname" id="label-p1">чекає…</div>
+    <div class="hearts" id="hearts-p1"></div>
+  </div>
+  <div class="pcard" id="pcard-p2">
+    <div class="pname" id="label-p2">чекає…</div>
+    <div class="hearts" id="hearts-p2"></div>
+  </div>
+</div>
+
+<div class="stage" id="stage"></div>
+
+<div class="controls" id="controls">
+  <button class="gbtn raise" id="btn-raise">
+    <span class="lbl"><span class="emoji">💚</span>Підняти</span>
+    <div class="cooldown" id="cd-raise"></div>
+    <div class="cdtext" id="cdt-raise"></div>
+  </button>
+  <button class="gbtn stop" id="btn-stop">
+    <span class="lbl"><span class="emoji">🛑</span>Стоп</span>
+    <div class="cooldown" id="cd-stop"></div>
+    <div class="cdtext" id="cdt-stop"></div>
+  </button>
+</div>
+
+<details class="rules">
+  <summary>як грати</summary>
+  <p>Дзвіночок схований під стаканчиком. Руки по черзі автоматично торкаються стаканчика — темп зростає.
+  Натисни <b class="g">💚 Підняти</b> — на твоєму наступному дотику рука підійме стаканчик і відкриє дзвіночок.
+  Якщо суперник цього не помітить і торкнеться — <b>🔔 задзвонить</b> і він втратить ❤.
+  Помітив, що стаканчик піднятий? Тисни <b class="r">🛑 Стоп</b> ДО свого дотику — захистишся, темп скинеться.
+  Кожна кнопка має <b>3 секунди перезарядки</b> окремо. Хто перший втратив 3 ❤ — програв.</p>
+</details>
+
+<script>
+  const ROOM = new URLSearchParams(location.search).get('room') || 'default';
+  const POLL_MS = 350;
+  const COOLDOWN_MS = 3000;
+
+  const PLAYER_ID_KEY = 'bell-player-id';
+  let playerId = localStorage.getItem(PLAYER_ID_KEY);
+  if (!playerId) {
+    playerId = 'p_' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+    localStorage.setItem(PLAYER_ID_KEY, playerId);
+  }
+
+  let mySlot = null;            // 'p1' | 'p2' | 'observer' | null
+  let myName = localStorage.getItem('bell-name') || '';
+  let state = null;
+  let serverOffset = 0;         // serverNow - localNow
+  let pollTimer = null;
+  let lastSig = '';
+
+  const $ = (id) => document.getElementById(id);
+  const stageEl = $('stage');
+  const controlsEl = $('controls');
+  const scoreboardEl = $('scoreboard');
+  const statusBar = $('status-bar');
+  const statusText = $('status-text');
+
+  const other = (s) => (s === 'p1' ? 'p2' : 'p1');
+  const estNow = () => Date.now() + serverOffset;
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // --- beat math (дзеркало сервера) ---
+  function intervalAt(b, sp){ return Math.max(sp.min, sp.start - b*sp.step); }
+  function beatStartMs(start, b, sp){ let t=start; for(let k=0;k<b;k++) t+=intervalAt(k,sp); return t; }
+  function currentBeat(start, now, sp){
+    if (start==null) return 0; let t=start, b=0;
+    while(b<100000){ const iv=intervalAt(b,sp); if(t+iv>now) return b; t+=iv; b++; }
+    return b;
+  }
+
+  async function api(method, body=null){
+    const url = `/api/bell?room=${encodeURIComponent(ROOM)}`;
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify({ ...body, playerId, room: ROOM });
+    const res = await fetch(url, opts);
+    const json = await res.json().catch(()=>({}));
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+    if (typeof json.now === 'number') serverOffset = json.now - Date.now();
+    return json;
+  }
+  function setStatus(cls, text){ statusBar.className='status-bar '+cls; statusText.textContent=text; }
+
+  async function join(name){
+    try{
+      const r = await api('POST',{action:'join',name});
+      mySlot=r.slot; state=r.state; myName=name; localStorage.setItem('bell-name',name);
+      lastSig=''; render(); startPolling();
+    }catch(e){ setStatus('error','не вдалось зайти: '+e.message); }
+  }
+  async function ready(){ try{ const r=await api('POST',{action:'ready'}); state=r.state; render(); }catch(e){ setStatus('error',e.message);} }
+  async function rematch(){ try{ const r=await api('POST',{action:'rematch'}); state=r.state; render(); }catch(e){ setStatus('error',e.message);} }
+  async function press(action){
+    // оптимістично — миттєвий cooldown локально, сервер підтвердить
+    try{ const r=await api('POST',{action}); state=r.state; render(); }catch(e){ setStatus('error',e.message); }
+  }
+  async function leaveRoom(){
+    if(!confirm('Покинути кімнату?')) return;
+    try{ await api('POST',{action:'leave'}); mySlot=null; state=null; stopPolling(); renderJoin(); setStatus('','вийшов'); }catch(e){ setStatus('error',e.message);} }
+
+  async function pollOnce(){
+    try{
+      const r = await api('GET'); state = r.state;
+      if (mySlot && mySlot!=='observer' && state[mySlot]?.id!==playerId){ mySlot=null; renderJoin(); return; }
+      if (!mySlot && state.p1 && state.p2 && state.p1.id!==playerId && state.p2.id!==playerId) mySlot='observer';
+      const sig = JSON.stringify([state.phase,state.round,state.hearts,state.winner,state.startVotes,!!state.cup,state.p1?.name,state.p2?.name]);
+      if (mySlot && sig!==lastSig){ lastSig=sig; render(); }
+      setStatus('online',`онлайн · кімната «${ROOM}»`);
+    }catch(e){ setStatus('error','офлайн · '+e.message); }
+  }
+  function startPolling(){ stopPolling(); pollOnce(); pollTimer=setInterval(pollOnce, POLL_MS); }
+  function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+
+  // ---------- RENDER ----------
+  function heartsHtml(slot){
+    const h = state.hearts[slot]; let s='';
+    for(let i=0;i<3;i++) s += i<h ? '❤' : '<span class="heart-lost">🤍</span>';
+    return s;
+  }
+  function updateScoreboard(){
+    if(!state) return;
+    scoreboardEl.style.display='flex';
+    const p1n = state.p1?.name||'чекає…', p2n = state.p2?.name||'чекає…';
+    $('label-p1').innerHTML = escapeHtml(p1n)+(mySlot==='p1'?'<span class="me">ти</span>':'');
+    $('label-p2').innerHTML = escapeHtml(p2n)+(mySlot==='p2'?'<span class="me">ти</span>':'');
+    $('hearts-p1').innerHTML = heartsHtml('p1');
+    $('hearts-p2').innerHTML = heartsHtml('p2');
+  }
+
+  function render(){
+    if(!state){ renderJoin(); return; }
+    updateScoreboard();
+    if(!mySlot){ renderJoin(); return; }
+
+    if(mySlot!=='observer'){
+      const opp = state[other(mySlot)];
+      if(!opp){ renderWaiting(); return; }
+    }
+    if(state.phase==='lobby'){ renderLobby(); return; }
+    if(state.phase==='gameover'){ renderGameover(); return; }
+    // playing | ringpause → ігровий стейдж (анімація в rAF)
+    renderArena();
+  }
+
+  function hideControls(){ controlsEl.style.display='none'; }
+  function showControls(){ controlsEl.style.display='grid'; }
+
+  function renderJoin(){
+    hideControls(); scoreboardEl.style.display='none';
+    stageEl.innerHTML = `
+      <div class="panel">
+        <div class="turn">приєднайся</div>
+        <div class="who">Як тебе звуть?</div>
+        <input type="text" id="name-input" maxlength="16" placeholder="ім'я" value="${escapeHtml(myName)}">
+        <div><button class="btn" id="join-btn">Грати 🔔</button></div>
+        ${roombarHtml()}
+      </div>`;
+    const inp=$('name-input'); inp.focus();
+    const go=()=>{ const n=inp.value.trim(); if(n) join(n); };
+    $('join-btn').onclick=go;
+    inp.onkeydown=(e)=>{ if(e.key==='Enter') go(); };
+    bindRoombar();
+  }
+
+  function renderWaiting(){
+    hideControls();
+    stageEl.innerHTML = `
+      <div class="panel">
+        <div class="centermsg bigmsg">Чекаємо суперника…</div>
+        <div class="submsg">поділись посиланням, щоб друг зайшов у цю кімнату</div>
+        ${roombarHtml()}
+        <div class="btnrow"><button class="btn ghost" id="leave-btn">вийти</button></div>
+      </div>`;
+    bindRoombar(); $('leave-btn').onclick=leaveRoom;
+  }
+
+  function renderLobby(){
+    hideControls();
+    const iVoted = state.startVotes[mySlot];
+    const oppVoted = state.startVotes[other(mySlot)];
+    stageEl.innerHTML = `
+      <div class="panel">
+        <div class="turn">кімната готова</div>
+        <div class="who">Обидва тиснуть «Почати»</div>
+        <div class="submsg">${iVoted?'✅ ти готовий':'⏳ ти ще не готовий'} · ${oppVoted?'✅ суперник готовий':'⏳ суперник чекає'}</div>
+        <div class="btnrow">
+          <button class="btn" id="ready-btn" ${iVoted?'disabled style="opacity:.5"':''}>${iVoted?'чекаю суперника…':'Почати ▶'}</button>
+          <button class="btn ghost" id="leave-btn">вийти</button>
+        </div>
+      </div>`;
+    if(!iVoted) $('ready-btn').onclick=ready;
+    $('leave-btn').onclick=leaveRoom;
+  }
+
+  function renderGameover(){
+    hideControls();
+    const iWon = state.winner===mySlot;
+    const oppName = state[other(mySlot)]?.name||'суперник';
+    const myNm = state[mySlot]?.name||'ти';
+    stageEl.innerHTML = `
+      <div class="panel">
+        <div class="centermsg countdown">${iWon?'🏆':'💥'}</div>
+        <div class="centermsg bigmsg">${iWon?'Перемога!':'Програш'}</div>
+        <div class="submsg">${iWon?escapeHtml(myNm)+' виграв — суперник дозвонився тричі':escapeHtml(oppName)+' переміг'}</div>
+        <div class="btnrow">
+          <button class="btn" id="rematch-btn">Ще раз 🔁</button>
+          <button class="btn ghost" id="leave-btn">вийти</button>
+        </div>
+      </div>`;
+    $('rematch-btn').onclick=rematch;
+    $('leave-btn').onclick=leaveRoom;
+  }
+
+  // основний ігровий екран — статична розмітка, оновлюється rAF-ом
+  let arenaMounted=false;
+  function renderArena(){
+    showControls();
+    if(!arenaMounted){
+      stageEl.innerHTML = `
+        <div class="arena" id="arena">
+          <div class="alert" id="alert" style="display:none">🛑 ЗУПИНИСЬ!</div>
+          <div class="hand left"  id="hand-left">✋</div>
+          <div class="hand right" id="hand-right">✋</div>
+          <div class="bell" id="bell">🔔</div>
+          <div class="cup" id="cup">🥤</div>
+          <div class="centermsg" id="overlay" style="position:absolute;z-index:7"></div>
+        </div>`;
+      arenaMounted=true;
+    }
+    $('btn-raise').onclick=()=>press('raise');
+    $('btn-stop').onclick=()=>press('stop');
+  }
+
+  // ---------- ANIMATION LOOP ----------
+  function frame(){
+    requestAnimationFrame(frame);
+    if(!state || !mySlot || mySlot==='observer') return;
+    if(state.phase!=='playing' && state.phase!=='ringpause'){ return; }
+    if(!arenaMounted) return;
+
+    const sp = state.speed || {start:1500,step:70,min:820};
+    const now = estNow();
+    const cup=$('cup'), bell=$('bell'), hl=$('hand-left'), hr=$('hand-right'),
+          alertEl=$('alert'), overlay=$('overlay');
+    if(!cup) return;
+
+    // ringpause overlay
+    if(state.phase==='ringpause'){
+      const loser=state.lastEvent?.loser;
+      overlay.style.display='block';
+      overlay.innerHTML = `<div class="bigmsg" style="color:var(--red)">🔔 ДЗВІНОК!</div>
+        <div class="submsg">${loser===mySlot?'ти торкнувся — −1 ❤':'суперник дозвонився — −1 ❤'}</div>`;
+      cup.classList.add('lifted'); bell.classList.add('show','ringing');
+      alertEl.style.display='none';
+      hl.style.opacity=hr.style.opacity='.3';
+      return;
+    }
+    overlay.style.display='none';
+    hl.style.opacity=hr.style.opacity='1';
+
+    const start=state.roundStartAt;
+    // lead / "Готуйсь"
+    if(start==null || now < start){
+      const left = start? Math.ceil((start-now)/600):0;
+      overlay.style.display='block';
+      overlay.innerHTML = `<div class="countdown">${left>0?left:'!'}</div>`;
+      cup.classList.remove('lifted'); bell.classList.remove('show','ringing');
+      alertEl.style.display='none';
+      resetHands(hl,hr);
+      return;
+    }
+    overlay.style.display='none';
+
+    const cb = currentBeat(start, now, sp);
+    const bs = beatStartMs(start, cb, sp);
+    const iv = intervalAt(cb, sp);
+    const f = Math.min(1, Math.max(0, (now-bs)/iv)); // прогрес у поточному beat
+    const ownerCur = (cb%2===0)? state.starter : other(state.starter);
+    const ownerNext = other(ownerCur);
+
+    // позиції рук: поточний власник відходить (тапнув на старті beat), наступний наближається
+    setHand(hl, hr, ownerCur, 1-f);  // 1 = біля стакана
+    setHand(hl, hr, ownerNext, f);
+
+    // стаканчик піднятий?
+    const cupRaised = state.cup && cb>=state.cup.raiseBeat && !state.cup.resolved;
+    if(cupRaised){
+      cup.classList.add('lifted'); bell.classList.add('show');
+      // рука того хто підняв — тримає (фіксуємо біля стакана)
+      setHand(hl,hr, state.cup.raisedBy, 1);
+      // я у небезпеці?
+      const iAmTarget = state.cup.raisedBy!==mySlot;
+      alertEl.style.display = iAmTarget ? 'block' : 'none';
+    } else {
+      cup.classList.remove('lifted'); bell.classList.remove('show','ringing');
+      alertEl.style.display='none';
+    }
+
+    updateCooldownUI(now);
+  }
+
+  function resetHands(hl,hr){ hl.style.transform='translateY(20px)'; hr.style.transform='scaleX(-1) translateY(20px)'; }
+  function setHand(hl,hr,slot,closeness){
+    // closeness 0=далеко, 1=біля стакана (тап). p1=ліва, p2=права.
+    const lift = 20 - closeness*52; // px вгору при наближенні
+    if(slot==='p1') hl.style.transform=`translateY(${lift}px)`;
+    else hr.style.transform=`scaleX(-1) translateY(${lift}px)`;
+  }
+
+  function updateCooldownUI(now){
+    if(!state.cooldown || !state.cooldown[mySlot]) return;
+    for(const btn of ['raise','stop']){
+      const last=state.cooldown[mySlot][btn]||0;
+      const left=last+COOLDOWN_MS-now;
+      const bar=$('cd-'+btn), txt=$('cdt-'+btn), b=$('btn-'+btn);
+      if(left>0){
+        bar.style.height=Math.min(100,(left/COOLDOWN_MS)*100)+'%';
+        txt.textContent=(left/1000).toFixed(1);
+        b.classList.add('cooling');
+      } else { bar.style.height='0%'; txt.textContent=''; b.classList.remove('cooling'); }
+    }
+  }
+
+  // ---------- room bar ----------
+  function roombarHtml(){
+    return `<div class="roombar">
+      <span>кімната: <code>${escapeHtml(ROOM)}</code></span>
+      <button id="rb-share">🔗 поділитися</button>
+      <button id="rb-new">нова</button>
+    </div>`;
+  }
+  function bindRoombar(){
+    const s=$('rb-share'), n=$('rb-new');
+    if(n) n.onclick=()=>{ const c=Math.random().toString(36).slice(2,8); location.href=location.pathname+'?room='+c; };
+    if(s) s.onclick=async()=>{
+      const url=location.origin+'/bell'+(ROOM!=='default'?'?room='+encodeURIComponent(ROOM):'');
+      try{ await navigator.clipboard.writeText(url); s.textContent='✓ скопійовано'; setTimeout(()=>s.textContent='🔗 поділитися',1500);}catch{ prompt('Скопіюй:',url);} };
+  }
+
+  // boot
+  renderJoin();
+  requestAnimationFrame(frame);
+  window.addEventListener('beforeunload',()=>{ /* keep slot for quick rejoin */ });
+</script>
+</body>
+</html>

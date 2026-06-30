@@ -21,6 +21,7 @@
     --ttt: #3dd9b3;
     --mem: #a586d6;
     --bs:  #e05252;
+    --bell: #f5c542;
     --soon: #5a6480;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -112,6 +113,7 @@
   .card.live[data-game="ttt"] .title  { color: var(--ttt); }
   .card.live[data-game="mem"] .title  { color: var(--mem); }
   .card.live[data-game="bs"]  .title  { color: var(--bs);  }
+  .card.live[data-game="bell"] .title  { color: var(--bell); }
   .card .desc {
     font-size: 12px;
     color: var(--text2);
@@ -189,6 +191,13 @@
     <div class="emoji">🚢</div>
     <div class="title">Морський Бій</div>
     <div class="desc">6×6 сітка, 4 кораблі — стріляй за координатами</div>
+  </a>
+
+  <a href="/bell" class="card live" data-game="bell">
+    <span class="badge live" style="background:rgba(245,197,66,.12);color:var(--bell);border-color:rgba(245,197,66,.35)">live</span>
+    <div class="emoji">🔔</div>
+    <div class="title">Не дзвони у дзвіночок</div>
+    <div class="desc">реакція + хитрість — підніми стаканчик, не дай супернику дзвонити</div>
   </a>
 </main>
 
